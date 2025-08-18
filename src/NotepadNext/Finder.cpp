@@ -181,3 +181,28 @@ int Finder::replaceAll(const QString &replaceText)
 
     return total;
 }
+
+int Finder::markAll()
+{
+    int total = 0;
+
+    if (text.length() > 0) {
+        forEachMatch([&](int start, int end) {
+            int indicator = editor->allocateIndicator(QString("marker_%1").arg(0));
+            editor->setIndicatorCurrent(indicator);
+
+            const QByteArray selText = editor->get_text_range(start, end);
+            Sci_TextToFind ttf {{0, (Sci_PositionCR)editor->length()}, selText.constData(), {-1, -1}};
+            const int flags = SCFIND_WHOLEWORD;
+
+            while (editor->send(SCI_FINDTEXT, flags, (sptr_t)&ttf) != -1) {
+                editor->indicatorFillRange(ttf.chrgText.cpMin, ttf.chrgText.cpMax - ttf.chrgText.cpMin);
+                ttf.chrg.cpMin = ttf.chrgText.cpMax;
+            }
+
+            total++;
+            return end;
+        });
+    }
+
+    return total;}

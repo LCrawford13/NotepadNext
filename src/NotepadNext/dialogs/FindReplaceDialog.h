@@ -76,6 +76,7 @@ public slots:
     void count();
     void replace();
     void replaceAll();
+    void markAll();
 
 private slots:
     void setEditor(ScintillaNext *edit);

@@ -58,6 +58,7 @@ FindReplaceDialog::FindReplaceDialog(ISearchResultsHandler *searchResults, MainW
     tabBar = new QTabBar();
     tabBar->addTab(tr("Find"));
     tabBar->addTab(tr("Replace"));
+    tabBar->addTab(tr("Mark"));
     tabBar->setExpanding(false);
     qobject_cast<QVBoxLayout *>(layout())->insertWidget(0, tabBar);
     connect(tabBar, &QTabBar::currentChanged, this, &FindReplaceDialog::changeTab);
@@ -143,6 +144,8 @@ FindReplaceDialog::FindReplaceDialog(ISearchResultsHandler *searchResults, MainW
 
         showMessage(tr("Replaced %Ln matches", "", count), "green");
     });
+    connect(ui->buttonMarkAll, &QPushButton::clicked, this, &FindReplaceDialog::markAll);
+
     connect(ui->buttonClose, &QPushButton::clicked, this, &FindReplaceDialog::close);
 
     loadSettings();
@@ -341,6 +344,16 @@ void FindReplaceDialog::replaceAll()
     showMessage(tr("Replaced %Ln matches", "", count), "green");
 }
 
+void FindReplaceDialog::markAll()
+{
+    qInfo(Q_FUNC_INFO);
+
+    prepareToPerformSearch();
+
+    int total = finder->markAll();
+    showMessage(tr("Mark: %Ln matches", "", total), "blue");
+}
+
 void FindReplaceDialog::count()
 {
     qInfo(Q_FUNC_INFO);
@@ -437,8 +450,16 @@ void FindReplaceDialog::changeTab(int index)
         ui->buttonReplaceAllInDocuments->hide();
 
         ui->buttonCount->show();
+        ui->buttonFind->show();
+        ui->buttonFind->setDefault(true);
         ui->buttonFindAllInCurrent->show();
         ui->buttonFindAllInDocuments->show();
+
+        ui->buttonMarkAll->hide();
+        ui->buttonClearAllMarks->hide();
+        ui->buttonCopyMarkedText->hide();
+        ui->checkBoxBookmarkLine->hide();
+        ui->checkBoxPurgeOnSearch->hide();
     }
     else if (index == 1) {
         ui->labelReplaceWith->setMaximumHeight(QWIDGETSIZE_MAX);
@@ -450,8 +471,37 @@ void FindReplaceDialog::changeTab(int index)
         ui->buttonReplaceAllInDocuments->show();
 
         ui->buttonCount->hide();
+        ui->buttonFind->show();
+        ui->buttonFind->setDefault(true);
         ui->buttonFindAllInCurrent->hide();
         ui->buttonFindAllInDocuments->hide();
+
+        ui->buttonMarkAll->hide();
+        ui->buttonClearAllMarks->hide();
+        ui->buttonCopyMarkedText->hide();
+        ui->checkBoxBookmarkLine->hide();
+        ui->checkBoxPurgeOnSearch->hide();
+    }
+    else if (index == 2) {
+        ui->labelReplaceWith->setMaximumHeight(0);
+        ui->comboReplace->setMaximumHeight(0);
+        ui->comboReplace->setFocusPolicy(Qt::StrongFocus); // Reset its focus policy
+
+        ui->buttonReplace->hide();
+        ui->buttonReplaceAll->hide();
+        ui->buttonReplaceAllInDocuments->hide();
+
+        ui->buttonCount->hide();
+        ui->buttonFind->hide();
+        ui->buttonFindAllInCurrent->hide();
+        ui->buttonFindAllInDocuments->hide();
+
+        ui->buttonMarkAll->show();
+        ui->buttonMarkAll->setDefault(true);
+        ui->buttonClearAllMarks->show();
+        ui->buttonCopyMarkedText->show();
+        ui->checkBoxBookmarkLine->show();
+        ui->checkBoxPurgeOnSearch->show();
     }
 
     ui->comboFind->setFocus();
@@ -510,6 +560,8 @@ void FindReplaceDialog::loadSettings()
     ui->comboFind->addItems(settings.value("RecentSearchList").toStringList());
     ui->comboReplace->addItems(settings.value("RecentReplaceList").toStringList());
 
+    ui->checkBoxBookmarkLine->setChecked(settings.value("Bookmark").toBool());
+    ui->checkBoxPurgeOnSearch->setChecked(settings.value("PurgeMarks").toBool());
     ui->checkBoxBackwardsDirection->setChecked(settings.value("Backwards").toBool());
     ui->checkBoxMatchWholeWord->setChecked(settings.value("WholeWord").toBool());
     ui->checkBoxMatchCase->setChecked(settings.value("MatchCase").toBool());
@@ -564,6 +616,8 @@ void FindReplaceDialog::saveSettings()
     }
     settings.setValue("RecentReplaceList", recentSearches);
 
+    settings.setValue("Bookmark", ui->checkBoxBookmarkLine->isChecked());
+    settings.setValue("PurgeMarks", ui->checkBoxPurgeOnSearch->isChecked());
     settings.setValue("Backwards", ui->checkBoxBackwardsDirection->isChecked());
     settings.setValue("WholeWord", ui->checkBoxMatchWholeWord->isChecked());
     settings.setValue("MatchCase", ui->checkBoxMatchCase->isChecked());
